@@ -1,5 +1,5 @@
 # Ruby-Snake
-Basic snake game coded in Ruby using Ruby2D.
+Basic Snake game coded in Ruby using Ruby2D.
 
 To run, execute `snake.rb` using:
 ```
