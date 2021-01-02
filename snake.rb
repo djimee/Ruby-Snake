@@ -11,11 +11,24 @@ class Snake
     # attribute writer that allows changing of direction value
     attr_writer :direction
 
-    def initialize
+    def initialize 
         @positions = [[2,0]] # 2D array as snake grows
         @direction = 'right'
+        @growing = false
+    end
+
+    def get_head_x
+        return head[0]
+    end
+
+    def get_head_y
+        return head[1]
     end
     
+    def grow
+        @growing = true
+    end
+
     def draw
         @positions.each do |position|
             Square.new(
@@ -26,27 +39,31 @@ class Snake
         end    
     end
     
+    # get head of the snake (last element in positions array)
     def head
-        @positions.last
+        return @positions.last
     end
 
     def move
         case @direction
         when 'up'
-            @positions.push([head[0], head[1] - 1])
-            @positions.shift
+            @positions.push(coords(head[0], head[1] - 1))
         when 'down'
-            @positions.push([head[0], head[1] + 1])
-            @positions.shift
+            @positions.push(coords(head[0], head[1] + 1))
         when 'left'
-            @positions.push([head[0] - 1, head[1]])
-            @positions.shift
+            @positions.push(coords(head[0] - 1, head[1]))
         when 'right'
-            @positions.push([head[0] + 1, head[1]])
+            @positions.push(coords(head[0] + 1, head[1]))
+        end
+
+        if !@growing
             @positions.shift
         end
+
+        @growing = false
     end
 
+    # can the snake move in the given direction? i.e. snake cannot turn back on itself
     def direction?(new_direction)
         case @direction
         when direction = 'up' then new_direction != 'down'
@@ -55,14 +72,80 @@ class Snake
         when direction = 'right' then new_direction != 'left'
         end
     end
+
+    # using the mod function, snake can reappear when going past the border
+    def coords(x, y)
+        return [x % WIDTH, y % HEIGHT]
+    end
+
+    def hit_itself?
+        @positions.length != @positions.uniq.length
+    end
+end
+
+class Game 
+    def initialize
+        @score = 0
+        @x_food = rand(WIDTH)
+        @y_food = rand(HEIGHT)
+        @finished = false
+    end
+
+    def draw_food 
+        unless finished?
+            Square.new(
+                x: @x_food * GRID_SIZE, y: @y_food * GRID_SIZE,
+                size: GRID_SIZE,
+                color: 'red'
+            )
+        end
+        if finished?
+            Text.new("Game over! Final score: #@score")
+        else
+            Text.new("Score: #@score")
+        end
+    end
+
+    def eat_food?(x, y)
+        return @x_food == x && @y_food == y
+    end
+    
+    def update_hit
+        @score += 1
+        @x_food = rand(WIDTH)
+        @y_food = rand(HEIGHT)
+        @growing = true
+    end
+
+    def finish
+        @finished = true
+    end
+
+    def finished?
+        @finished
+    end
 end
 
 snake = Snake.new
+game = Game.new
 
 update do 
     clear
-    snake.move
+
+    unless game.finished?
+        snake.move
+    end
     snake.draw
+    game.draw_food
+
+    if game.eat_food?(snake.get_head_x, snake.get_head_y)
+        game.update_hit
+        snake.grow
+    end
+
+    if snake.hit_itself?
+        game.finish
+    end
 end
 
 on :key_down do |event|
